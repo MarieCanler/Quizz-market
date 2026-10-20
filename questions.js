@@ -12,7 +12,7 @@ module.exports = [
     ],
     correct: [1, 3],
     multi: true,
-    points: 0.3
+    points: 0.25
   },
   {
     text: "Dans les situations suivantes, quelle situation relève d'une distribution omnicanale ?",
@@ -34,7 +34,7 @@ module.exports = [
     ],
     correct: [0, 1],
     multi: true,
-    points: 0.25
+    points: 0.2
   },
   {
     context: "Scénario : vous lancez votre marque de shampoings et après-shampoings à fabriquer soi-même.",
@@ -46,7 +46,7 @@ module.exports = [
     ],
     correct: [2],
     multi: true,
-    points: 0.3
+    points: 0.25
   },
   {
     text: "« Torrel Beauty Hair » souhaite toucher le plus grand nombre de consommateurs possible, notamment pour créer du passage dans sa toute nouvelle boutique parisienne. Quelles actions allez-vous mettre en place ?",
@@ -59,7 +59,7 @@ module.exports = [
     ],
     correct: [0, 1, 2, 4],
     multi: true,
-    points: 0.4
+    points: 0.35
   },
   {
     text: "Pour l'ouverture de votre boutique parisienne, vous souhaitez marquer le coup et créer une expérience client mémorable. Que faites-vous en termes de communication ?",
@@ -70,7 +70,7 @@ module.exports = [
     ],
     correct: [2],
     multi: true,
-    points: 0.25
+    points: 0.2
   },
   {
     text: "C'est le jour J, la boutique est ouverte ! Quelles actions avez-vous prévues sur place pour rendre l'expérience de vos clients mémorable ?",
@@ -82,7 +82,7 @@ module.exports = [
     ],
     correct: [0, 3],
     multi: true,
-    points: 0.3
+    points: 0.25
   },
   {
     text: "Les tendances de consommation changent. Vous souhaitez mettre en place de nouvelles pratiques pour coller à ces tendances. Lesquelles choisiriez-vous ?",
@@ -94,7 +94,7 @@ module.exports = [
     ],
     correct: [1, 2, 3],
     multi: true,
-    points: 0.35
+    points: 0.3
   },
   {
     text: "Votre responsable s'interroge sur les avantages, à court terme, d'une stratégie omnicanale pour une jeune entreprise comme « Torrel Beauty Hair ». Que lui répondez-vous ?",
@@ -106,7 +106,7 @@ module.exports = [
     ],
     correct: [0, 2, 3],
     multi: true,
-    points: 0.35
+    points: 0.3
   },
   {
     text: "Pour accroître votre chiffre d'affaires, vous souhaitez mettre en place une action marketing mais n'avez pas de budget. Quelles actions pouvez-vous mettre en place ?",
@@ -116,6 +116,30 @@ module.exports = [
       "Utiliser le passage généré par l'ouverture de la boutique pour mettre en avant et faire connaître le site"
     ],
     correct: [0, 2],
+    multi: true,
+    points: 0.2
+  },
+  {
+    text: "Quel indicateur mesure directement la capacité du site à transformer ses visites en commandes ?",
+    options: [
+      "Le nombre d'abonnés sur les réseaux sociaux",
+      "Le taux de conversion",
+      "Le NPS",
+      "Le panier moyen"
+    ],
+    correct: [1],
+    multi: false,
+    points: 0.2
+  },
+  {
+    text: "Pour favoriser le réachat après une première commande, quelles actions relèvent principalement de la fidélisation ?",
+    options: [
+      "Envoyer des conseils d'usage adaptés au produit acheté",
+      "Proposer un programme de fidélité pertinent",
+      "Acheter des mots-clés pour toucher uniquement des prospects",
+      "Faciliter le contact avec le service après-vente"
+    ],
+    correct: [0, 1],
     multi: true,
     points: 0.25
   }

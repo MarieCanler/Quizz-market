@@ -1,6 +1,6 @@
 # Quiz Omnicanal — quiz en direct façon Kahoot
 
-10 questions · 30 s par question · note sur 3 points · classement en temps réel.
+12 questions · 30 s par question · note sur 3 points · classement en temps réel.
 
 ## Lancer en local
 ```bash
@@ -18,13 +18,12 @@ npm start
 5. À la fin : podium et classement complet.
 
 ## Barème (total 3 pts)
-| Q | Pts | Q | Pts |
-|---|-----|---|-----|
-| 1 | 0,3  | 6  | 0,25 |
-| 2 | 0,25 | 7  | 0,3  |
-| 3 | 0,25 | 8  | 0,35 |
-| 4 | 0,3  | 9  | 0,35 |
-| 5 | 0,4  | 10 | 0,25 |
+| Q | Pts | Q | Pts | Q | Pts |
+|---|-----|---|-----|---|-----|
+| 1 | 0,25 | 5 | 0,35 | 9  | 0,3  |
+| 2 | 0,25 | 6 | 0,2  | 10 | 0,2  |
+| 3 | 0,2  | 7 | 0,25 | 11 | 0,2  |
+| 4 | 0,25 | 8 | 0,3  | 12 | 0,25 |
 
 Questions à choix multiples : (bonnes cochées − mauvaises cochées) / nombre de bonnes réponses, jamais négatif.
 À score égal, le plus rapide (temps de réponse cumulé) passe devant.
