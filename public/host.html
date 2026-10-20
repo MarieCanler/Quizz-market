@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quiz Omnicanal · Animateur</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;600;700&family=Fugaz+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="host">
+    <div class="topbar">
+      <div class="brand">Quiz <span>Omnicanal</span></div>
+      <div id="pinTop"></div>
+    </div>
+    <main id="app" class="stage center"></main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/common.js"></script>
+  <script>
+    const socket = io();
+    const app = document.getElementById('app');
+    const pinTop = document.getElementById('pinTop');
+
+    let hostKey = store('quiz-host-key');
+    if (!hostKey) { hostKey = randomId(); store('quiz-host-key', hostKey); }
+
+    let st = { phase: 'connecting' };
+    const seenNames = new Set();
+
+    socket.on('connect', () => socket.emit('host:hello', { hostKey }));
+    socket.on('state', s => {
+      st = s;
+      if (s.phase === 'question') Timer.set(s.remaining, s.duration);
+      render();
+    });
+
+    const next = () => socket.emit('host:next');
+    const create = () => {
+      if (st.phase !== 'none' && st.phase !== 'end' && !confirm('Une partie est en cours. En lancer une nouvelle ?')) return;
+      seenNames.clear();
+      socket.emit('host:create', { hostKey });
+    };
+
+    function joinUrl() { return location.origin + '/?pin=' + st.pin; }
+
+    function tilesHtml(q, reveal) {
+      const max = reveal ? Math.max(1, ...st.counts) : 1;
+      const odd = q.options.length % 2 === 1 ? ' odd' : '';
+      return `<div class="tiles${odd}">` + q.options.map((o, i) => {
+        const good = reveal && st.correct.includes(i);
+        const cls = reveal ? (good ? ' good' : ' dim') : '';
+        const right = reveal
+          ? `<span class="count">${st.counts[i]}</span><span class="check">${good ? '✔' : '✖'}</span>
+             <div class="bar-wrap"><div class="bar-fill" style="width:${st.counts[i] / max * 100}%"></div></div>`
+          : '';
+        return `<div class="tile c${i}${cls}"><span class="shape">${SHAPES[i]}</span><span class="txt">${esc(o)}</span>${right}</div>`;
+      }).join('') + '</div>';
+    }
+
+    function metaHtml() {
+      const q = st.question;
+      return `<div class="q-meta">
+        <span class="tag">Question ${st.index + 1} / ${st.total}</span>
+        <span class="tag y">${fmt(q.points)} pt</span>
+        ${q.multi ? '<span class="tag r">Plusieurs réponses possibles</span>' : '<span class="tag">Une seule réponse</span>'}
+      </div>`;
+    }
+
+    function questionBox() {
+      const q = st.question;
+      return `<div class="q-box">${q.context ? `<p class="ctx">${esc(q.context)}</p>` : ''}<h2>${esc(q.text)}</h2></div>`;
+    }
+
+    function boardHtml(rows) {
+      if (!rows.length) return '<p class="empty">Aucun participant</p>';
+      return '<div class="board">' + rows.map((r, i) => `
+        <div class="row" style="animation-delay:${i * 0.08}s">
+          <span class="rk">${r.rank}</span><span class="nm">${esc(r.name)}</span>
+          <span class="sc">${fmt(r.score)} / ${fmt(st.maxScore)}</span>
+        </div>`).join('') + '</div>';
+    }
+
+    function render() {
+      pinTop.innerHTML = st.pin && st.phase !== 'lobby' && st.phase !== 'none'
+        ? `<div class="pin-pill">PIN <b>${st.pin}</b></div>` : '';
+      app.className = 'stage';
+
+      switch (st.phase) {
+        case 'connecting':
+          app.className = 'stage center';
+          app.innerHTML = '<div class="spinner"></div>';
+          break;
+
+        case 'none':
+          app.className = 'stage center';
+          app.innerHTML = `<div class="welcome">
+            <h1>Étude de cas<br><em>Omnicanalité</em></h1>
+            <p>10 questions · 30 secondes chacune · note finale sur 3 points</p>
+            <button class="btn" onclick="create()">Créer la partie</button>
+          </div>`;
+          break;
+
+        case 'lobby': {
+          const names = st.players.map(p => p.name);
+          app.innerHTML = `<div class="lobby">
+            <div class="join-card">
+              <span class="label">Rejoignez sur</span>
+              <span class="url">${esc(location.host)}</span>
+              <span class="label">Code PIN</span>
+              <span class="pin">${st.pin}</span>
+              <div id="qr"></div>
+            </div>
+            <div class="players-panel">
+              <div class="players-head">
+                <h2><span class="count-badge">${names.length}</span>Participants</h2>
+                <button class="btn" onclick="next()" ${names.length ? '' : 'disabled'}>Lancer le quiz ▶</button>
+              </div>
+              <div class="chips">
+                ${names.length ? names.map(n => `<span class="chip${seenNames.has(n) ? '' : ' new'}">${esc(n)}</span>`).join('')
+                  : '<p class="empty">En attente des participants…</p>'}
+              </div>
+            </div>
+          </div>`;
+          names.forEach(n => seenNames.add(n));
+          if (window.QRCode) new QRCode(document.getElementById('qr'), { text: joinUrl(), width: 200, height: 200, colorDark: '#0b2c30' });
+          break;
+        }
+
+        case 'question':
+          app.innerHTML = `${metaHtml()}${questionBox()}
+            <div class="q-middle">
+              <div class="ring" data-ring><span data-timer>30</span></div>
+              <div class="answered-box"><div class="n">${st.answered}/${st.players.filter(p => p.connected).length}</div><div class="l">réponses</div></div>
+            </div>
+            ${tilesHtml(st.question, false)}
+            <div class="controls"><button class="btn red" onclick="next()">Arrêter le chrono ⏭</button></div>`;
+          break;
+
+        case 'reveal':
+          app.innerHTML = `${metaHtml()}${questionBox()}
+            ${tilesHtml(st.question, true)}
+            <div class="controls"><button class="btn" onclick="next()">Classement ▶</button></div>`;
+          break;
+
+        case 'leaderboard': {
+          const last = st.index + 1 >= st.total;
+          app.innerHTML = `<h1 class="page-title">Classement</h1>
+            ${boardHtml(st.ranking.slice(0, 5))}
+            <div class="controls"><button class="btn" onclick="next()">${last ? 'Podium final 🏆' : 'Question suivante ▶'}</button></div>`;
+          break;
+        }
+
+        case 'end': {
+          const [a, b, c] = st.ranking;
+          const step = (p, n) => p ? `<div class="step p${n}"><span class="who">${esc(p.name)}</span><span class="pts">${fmt(p.score)} / ${fmt(st.maxScore)}</span><div class="block">${n}</div></div>` : '';
+          app.innerHTML = `<h1 class="page-title">Podium</h1>
+            <div class="podium">${step(b, 2)}${step(a, 1)}${step(c, 3)}</div>
+            <h2 style="text-align:center;margin-top:12px">Classement complet</h2>
+            ${boardHtml(st.ranking)}
+            <div class="controls"><button class="btn blue" onclick="create()">Nouvelle partie</button></div>`;
+          break;
+        }
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>

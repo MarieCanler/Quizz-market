@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Quiz Omnicanal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;600;700&family=Fugaz+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app" class="player"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/common.js"></script>
+  <script>
+    const socket = io();
+    const app = document.getElementById('app');
+    const params = new URLSearchParams(location.search);
+
+    let myId = store('quiz-player-id');
+    if (!myId) { myId = randomId(); store('quiz-player-id', myId); }
+
+    let session = store('quiz-session'); // { pin, name }
+    let st = null;
+    let selection = new Set();
+    let viewKey = '';
+    let joinError = '';
+    let notice = '';
+
+    socket.on('connect', () => {
+      if (session) join(session.pin, session.name, true);
+      else renderJoin();
+    });
+
+    socket.on('state', s => {
+      if (s.phase === 'closed') {
+        session = null; store('quiz-session', null); st = null;
+        notice = 'La partie a été fermée par l\'animateur.';
+        return renderJoin();
+      }
+      st = s;
+      if (s.phase === 'question') Timer.set(s.remaining, s.duration);
+      const key = s.phase + '-' + s.index;
+      if (key !== viewKey) { selection = new Set(); viewKey = key; }
+      render();
+    });
+
+    function join(pin, name, silent) {
+      socket.emit('player:join', { pin, name, id: myId }, res => {
+        if (res.ok) {
+          session = { pin, name: res.name };
+          store('quiz-session', session);
+          joinError = '';
+        } else if (silent) {
+          session = null; store('quiz-session', null);
+          renderJoin();
+        } else {
+          joinError = res.error;
+          const el = document.getElementById('err');
+          if (el) el.textContent = joinError;
+        }
+      });
+    }
+
+    function renderJoin() {
+      const pin = params.get('pin') || '';
+      app.innerHTML = `<div class="p-body p-center">
+        <form class="join-form" id="joinForm">
+          <h1>Quiz <span>Omnicanal</span></h1>
+          ${notice ? `<p class="error">${esc(notice)}</p>` : ''}
+          <input id="pin" inputmode="numeric" maxlength="6" placeholder="Code PIN" value="${esc(pin)}" autocomplete="off">
+          <input id="name" maxlength="20" placeholder="Ton pseudo" autocomplete="off">
+          <p class="error" id="err">${esc(joinError)}</p>
+          <button class="btn" type="submit">C'est parti !</button>
+        </form>
+      </div>`;
+      document.getElementById(pin ? 'name' : 'pin').focus();
+      document.getElementById('joinForm').onsubmit = e => {
+        e.preventDefault();
+        notice = '';
+        join(document.getElementById('pin').value.trim(), document.getElementById('name').value, false);
+      };
+    }
+
+    function topBar() {
+      return `<div class="p-top"><span class="nm">${esc(st.name)}</span><span class="sc">${fmt(st.score)} / ${fmt(st.maxScore)} pt</span></div>`;
+    }
+
+    function send(choice) {
+      socket.emit('player:answer', { choice });
+    }
+
+    function pick(i) {
+      if (!st.question.multi) return send([i]);
+      selection.has(i) ? selection.delete(i) : selection.add(i);
+      document.querySelectorAll('.p-tiles .tile').forEach((el, j) => el.classList.toggle('sel', selection.has(j)));
+      document.getElementById('validate').disabled = selection.size === 0;
+    }
+
+    function render() {
+      if (!st) return;
+      const q = st.question;
+      switch (st.phase) {
+        case 'lobby':
+          app.innerHTML = `${topBar()}<div class="p-body p-center">
+            <div class="big-emoji">🙌</div>
+            <h1 class="p-title">Tu es dans la partie !</h1>
+            <p class="p-sub">Ton pseudo apparaît à l'écran.<br>Le quiz va bientôt commencer…</p>
+          </div>`;
+          break;
+
+        case 'question':
+          if (st.hasAnswered) {
+            app.innerHTML = `${topBar()}<div class="p-body p-center">
+              <div class="spinner"></div>
+              <h1 class="p-title">Réponse envoyée</h1>
+              <p class="p-sub">On attend les autres… <span data-timer></span> s</p>
+            </div>`;
+            break;
+          }
+          app.innerHTML = `${topBar()}<div class="p-body">
+            <div class="timebar" data-bar><div></div></div>
+            <div class="p-qline"><span>Question <b>${st.index + 1}/${st.total}</b></span><span><b data-timer>30</b> s · ${fmt(q.points)} pt</span></div>
+            ${q.context ? `<p class="p-sub">${esc(q.context)}</p>` : ''}
+            <p class="p-question">${esc(q.text)}</p>
+            ${q.multi ? '<p class="p-hint">Plusieurs réponses possibles — coche puis valide</p>' : ''}
+            <div class="p-tiles">
+              ${q.options.map((o, i) => `<button class="tile c${i}${selection.has(i) ? ' sel' : ''}" onclick="pick(${i})">
+                <span class="shape">${SHAPES[i]}</span><span class="txt">${esc(o)}</span>${q.multi ? '<span class="tick">✔</span>' : ''}
+              </button>`).join('')}
+            </div>
+            ${q.multi ? `<button class="btn p-validate" id="validate" onclick="send([...selection])" ${selection.size ? '' : 'disabled'}>Valider</button>` : ''}
+          </div>`;
+          break;
+
+        case 'reveal':
+        case 'leaderboard': {
+          const answered = st.myChoice.length > 0;
+          const kind = !answered || st.ratio === 0 ? 'ko' : st.ratio === 1 ? 'ok' : 'partial';
+          const title = !answered ? 'Temps écoulé' : kind === 'ok' ? 'Bonne réponse !' : kind === 'partial' ? 'Presque !' : 'Raté…';
+          const emoji = !answered ? '⏰' : kind === 'ok' ? '🎉' : kind === 'partial' ? '👌' : '😬';
+          app.innerHTML = `<div class="feedback ${kind}">${topBar()}<div class="p-body p-center">
+            <div class="big-emoji">${emoji}</div>
+            <h1 class="p-title">${title}</h1>
+            <div class="gain">+${fmt(st.gained)} pt</div>
+            <p class="p-sub" style="color:inherit">Tu es <b>${st.rank}${st.rank === 1 ? 'er' : 'e'}</b> sur ${st.totalPlayers}</p>
+            <div class="recap"><b>Bonne(s) réponse(s) :</b><ul>${st.correct.map(i => `<li>${SHAPES[i]} ${esc(q.options[i])}</li>`).join('')}</ul></div>
+          </div></div>`;
+          break;
+        }
+
+        case 'end': {
+          const medal = ['🥇', '🥈', '🥉'][st.rank - 1] || '🏁';
+          app.innerHTML = `${topBar()}<div class="p-body p-center">
+            <div class="big-emoji">${medal}</div>
+            <h1 class="p-title">Partie terminée</h1>
+            <div class="gain">${fmt(st.score)} / ${fmt(st.maxScore)}</div>
+            <p class="p-sub">Classement final : <b>${st.rank}${st.rank === 1 ? 'er' : 'e'}</b> sur ${st.totalPlayers}</p>
+          </div>`;
+          break;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
