@@ -9,7 +9,8 @@ const QUESTION_TIME = 30000; // 30 secondes par question
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+// Délais de ping larges : les téléphones en veille ou en 4G ne sont pas déconnectés trop vite.
+const io = new Server(server, { pingInterval: 20000, pingTimeout: 60000 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/host', (req, res) => res.sendFile(path.join(__dirname, 'public', 'host.html')));

@@ -166,6 +166,10 @@ input { font: inherit; }
 .row .rk { font-family: 'Fugaz One', cursive; width: 48px; color: var(--blue-dark); }
 .row .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row .sc { font-family: 'Fugaz One', cursive; }
+/* Beaucoup de participants : classement sur plusieurs colonnes, lu de haut en bas */
+.board.compact { display: block; columns: 3 260px; column-gap: 12px; max-width: 1340px; }
+.board.compact .row { break-inside: avoid; margin-bottom: 8px; padding: 8px 14px; font-size: 1.05rem; gap: 10px; }
+.board.compact .row .rk { width: 34px; }
 .row:nth-child(1) { background: var(--yellow); }
 .row:nth-child(2) { background: #e8f7f7; }
 .row:nth-child(3) { background: #ffe1dc; }
@@ -216,7 +220,7 @@ input { font: inherit; }
 .p-hint { color: var(--yellow); font-weight: 600; font-size: .95rem; }
 
 .p-tiles { display: flex; flex-direction: column; gap: 10px; }
-.p-tiles .tile { min-height: 64px; font-size: 1rem; padding: 12px 14px; width: 100%; }
+.p-tiles .tile { touch-action: manipulation; -webkit-tap-highlight-color: transparent; min-height: 64px; font-size: 1rem; padding: 12px 14px; width: 100%; }
 .p-tiles .tile .shape { font-size: 1.5rem; width: 30px; }
 .p-tiles .tile.sel { outline: 5px solid #fff; outline-offset: -5px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px #fff; }
 .p-tiles .tile.c3.sel { outline-color: var(--blue); }

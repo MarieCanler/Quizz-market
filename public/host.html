@@ -78,8 +78,9 @@
 
     function boardHtml(rows) {
       if (!rows.length) return '<p class="empty">Aucun participant</p>';
-      return '<div class="board">' + rows.map((r, i) => `
-        <div class="row" style="animation-delay:${i * 0.08}s">
+      const compact = rows.length > 8 ? ' compact' : '';
+      return `<div class="board${compact}">` + rows.map((r, i) => `
+        <div class="row" style="animation-delay:${Math.min(i * 0.05, 1.5)}s">
           <span class="rk">${r.rank}</span><span class="nm">${esc(r.name)}</span>
           <span class="sc">${fmt(r.score)} / ${fmt(st.maxScore)}</span>
         </div>`).join('') + '</div>';
@@ -150,7 +151,7 @@
         case 'leaderboard': {
           const last = st.index + 1 >= st.total;
           app.innerHTML = `<h1 class="page-title">Classement</h1>
-            ${boardHtml(st.ranking.slice(0, 5))}
+            ${boardHtml(st.ranking)}
             <div class="controls"><button class="btn" onclick="next()">${last ? 'Podium final 🏆' : 'Question suivante ▶'}</button></div>`;
           break;
         }

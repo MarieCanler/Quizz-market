@@ -26,6 +26,7 @@
     let st = null;
     let selection = new Set();
     let viewKey = '';
+    let shownKey = ''; // écran actuellement affiché, pour ne pas le redessiner inutilement
     let joinError = '';
     let notice = '';
 
@@ -65,6 +66,7 @@
     }
 
     function renderJoin() {
+      shownKey = '';
       const pin = params.get('pin') || '';
       app.innerHTML = `<div class="p-body p-center">
         <form class="join-form" id="joinForm">
@@ -102,6 +104,11 @@
     function render() {
       if (!st) return;
       const q = st.question;
+      // Pendant une question, ne jamais redessiner un écran déjà affiché : sinon la page remonte en haut
+      // (ex. reconnexion du téléphone en arrière-plan). La sélection en cours est conservée.
+      const key = st.phase === 'question' ? `q-${st.index}-${st.hasAnswered ? 'sent' : 'open'}` : '';
+      if (key && key === shownKey) return;
+      shownKey = key;
       switch (st.phase) {
         case 'lobby':
           app.innerHTML = `${topBar()}<div class="p-body p-center">
